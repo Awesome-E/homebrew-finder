@@ -1,0 +1,22 @@
+:root {
+  --text-primary: #f9d094;
+}
+html {
+  width: 300px;
+}
+body {
+  margin: 0;
+  color: var(--text-primary);
+  background: #2e2a24;
+}
+h1 {
+  text-align: center;
+}
+table {
+  margin: auto;
+  font-size: 1.2em;
+}
+p {
+  padding: 0 12px 4px;
+  text-align: center;
+}
