@@ -11,10 +11,10 @@ function copyText (txt) {
   document.body.removeChild(copyTextArea)
 }
 
-function addRows (data) {
+function addRows (data = {}) {
   document.querySelectorAll(data.total_hits ? '.content' : '.nocontent').forEach(elm => elm.classList.remove('hidden'))
-  console.log(data)
   if (!data.results) return
+  console.log(data)
   data.results.forEach(result => {
     const clone = document.getElementById('result-template').content.cloneNode(true).firstElementChild
     if (result.primary) clone.classList.add('primary-result')
