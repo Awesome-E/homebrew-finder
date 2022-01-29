@@ -6,7 +6,7 @@ function copyText (txt) {
   copyTextArea.value = txt
   document.body.appendChild(copyTextArea)
   copyTextArea.select()
-  copyTextArea.setSelectionRange(0, copyTextArea.value.length) // Mobile
+  copyTextArea.setSelectionRange(0, copyTextArea.value.length)
   document.execCommand('copy')
   document.body.removeChild(copyTextArea)
 }
@@ -87,6 +87,8 @@ function addRows (data) {
   })
 }
 
-(chrome || browser).runtime.sendMessage({ type: 'get-site-packages' }, data => {
-  addRows(data)
+(chrome || browser).runtime.sendMessage({ type: 'get-site-packages' }, data => console.log(data));
+(chrome || browser).runtime.onMessage.addListener(message => {
+  if (message.type !== 'send-site-packages') return
+  addRows(message.data)
 })

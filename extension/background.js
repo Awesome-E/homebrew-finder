@@ -1,40 +1,74 @@
 const brewPackages = {}
-let currentPageResults = {}
 function toURL (url /* url object */) {
   if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
   // Synonymize www with root domain, then allow search query to contain both
   return url.origin.replace(/\/\/www\./, '//') + url.pathname
 }
-function updateBadge (tabId) {
-  if (!currentPageResults.total_hits) {
-    chrome.browserAction.setBadgeText({ tabId, text: '' }, () => {})
-    chrome.browserAction.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
+function updateBadge (url, tabId) {
+  const pageResults = brewPackages[url] || {}
+  if (!pageResults.total_hits) {
+    chrome.action.setBadgeText({ tabId, text: '' }, () => {})
+    chrome.action.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
     return
   }
-  const totalHits = currentPageResults.total_hits
-  const primaryHits = currentPageResults.results.filter(r => r.primary).length
+  const totalHits = pageResults.total_hits
+  const primaryHits = pageResults.results.filter(r => r.primary).length
   const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: String(primaryHits || totalHits) }
-  chrome.browserAction.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
-  chrome.browserAction.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
-  chrome.browserAction.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
-}
-function clearResult (tabId) {
-  currentPageResults = {}
-  updateBadge(tabId)
+  chrome.action.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
+  chrome.action.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
+  chrome.action.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
 
 function updateAvailablePackages (url, tabId) {
   if (!tabId) return console.error(new Error('No Tab ID Provided'))
 
-  const xhr = new XMLHttpRequest()
   url = new URL(url)
-  if (brewPackages[url]) return updateBadge(tabId) // Package Matches already exist
+  if (brewPackages[toURL(url)]) return updateBadge(toURL(url), tabId) // Package Matches already exist
   if (!url.protocol.match(/^https?:$/)) return
-  xhr.open('POST', 'https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries')
-  xhr.addEventListener('load', () => {
-    const res = xhr.responseText
-    let response = {}
-    try { response = JSON.parse(res) } catch (e) { }
+
+  function getUrlQuery (types) {
+    // Add www to the front of the domain (won't affect search results for subdomains)
+    const urls = {
+      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
+      currentOnly_pathed: toURL(url),
+      currentAndSub_pathed: url.hostname + url.pathname,
+      www: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}`,
+      currentOnly: url.origin.replace(/\/\/www\./, '//') + '/',
+      currentAndSub: url.hostname
+    }
+    // Backslash escape period so it works with Algolia
+    Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
+    return types.map(type => JSON.stringify(urls[type])).join(' ')
+  }
+  fetch('https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-algolia-application-id': 'BH4D9OD16A',
+      'x-algolia-api-key': 'a57ef92bf2adfae863a201ee43d6b5a1'
+    },
+    body: JSON.stringify({
+      requests: [
+        {
+          indexName: 'brew_all',
+          query: getUrlQuery(['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
+          hitsPerPage: 10,
+          facetFilters: '["lang: en", "site: formulae"]',
+          advancedSyntax: true
+        },
+        (url.pathname !== '/'
+          ? {
+              // Primary Result Query
+              indexName: 'brew_all',
+              query: getUrlQuery(['currentOnly_pathed', 'www_pathed']),
+              hitsPerPage: 10,
+              facetFilters: '["lang: en", "site: formulae"]',
+              advancedSyntax: true
+            }
+          : undefined)
+      ].filter(q => !!q)
+    })
+  }).then(r => r.json()).then(response => {
     const data = {
       results: response.results[0].hits.filter(x => x.anchor === 'default').map(x => {
         return {
@@ -48,77 +82,42 @@ function updateAvailablePackages (url, tabId) {
       }),
       total_hits: response.results[0].nbHits
     }
-    currentPageResults = brewPackages[toURL(url)] = data
-    updateBadge(tabId)
+    brewPackages[toURL(url)] = data
+    updateBadge(toURL(url), tabId)
   })
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-algolia-application-id': 'BH4D9OD16A',
-    'x-algolia-api-key': 'a57ef92bf2adfae863a201ee43d6b5a1'
-  }
-  Object.entries(headers).forEach(e => {
-    xhr.setRequestHeader(e[0], e[1])
-  })
-  function getUrlQuery (types) {
-    // Add www to the front of the domain (won't affect search results for subdomains)
-    const urls = {
-      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
-      currentOnly_pathed: toURL(url),
-      currentAndSub_pathed: url.hostname + url.pathname,
-      www: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}`,
-      currentOnly: url.origin.replace(/\/\/www\./, '//') + '/',
-      currentAndSub: url.hostname
-    }
-    // Backslash escape period so it works with Algolia
-    Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
-    // console.log(urls.currentAndSub, toURL(url).replace(/^\w+:\/\//, '').replace(/\./g, '\\.'))
-    console.log(types.map(type => JSON.stringify(urls[type])).join(' '))
-    return types.map(type => JSON.stringify(urls[type])).join(' ')
-  }
-  xhr.send(JSON.stringify({
-    requests: [
-      {
-        indexName: 'brew_all',
-        query: getUrlQuery(['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
-        hitsPerPage: 10,
-        facetFilters: '["lang: en", "site: formulae"]',
-        advancedSyntax: true
-      },
-      (url.pathname !== '/'
-        ? {
-            // Primary Result Query
-            indexName: 'brew_all',
-            query: getUrlQuery(['currentOnly_pathed', 'www_pathed']),
-            hitsPerPage: 10,
-            facetFilters: '["lang: en", "site: formulae"]',
-            advancedSyntax: true
-          }
-        : undefined)
-    ].filter(q => !!q)
-  }))
 }
 
-function findCurrentPagePackages () {
+function findCurrentPagePackages (activeWindowOnly = true) {
   chrome.tabs.query({
     active: true,
-    lastFocusedWindow: true
+    lastFocusedWindow: activeWindowOnly
   }, function (tabs) {
-    const tab = tabs[0]
-    if (!tab || !tab.url) return clearResult(tab.id)
-    const url = new URL(tab.url)
-    if (!url.protocol.match(/^https?:$/)) return clearResult(tab.id)
-    currentPageResults = brewPackages[toURL(url)]
-    // If current page is not stored, get packages
-    if (!currentPageResults) return updateAvailablePackages(toURL(url), tab.id)
-    updateBadge(tab.id)
+    tabs.forEach(tab => {
+      if (!tab || !tab.url) return
+      const url = new URL(tab.url)
+      if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
+      const pageResults = brewPackages[toURL(url)]
+      // If current page is not stored, get packages
+      if (!pageResults) return updateAvailablePackages(toURL(url), tab.id)
+      updateBadge(toURL(url), tab.id)
+    })
   })
 }
 
-(chrome || browser).runtime.onMessage.addListener(function (request, sender, sendResponse) {
+(chrome || browser).runtime.onMessage.addListener(async function (request, sender, sendResponse) {
   switch (request.type) {
-    case 'get-site-packages':
-      sendResponse(currentPageResults)
+    case 'get-site-packages': {
+      // Always received from popup -> will always query active tab
+      sendResponse({ message: 'request received' })
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+        const tab = tabs[0]
+        if (!tab || !tab.url) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
+        const url = new URL(tab.url)
+        if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id); // Will have zero matches -> disables icon
+        (chrome || browser).runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[toURL(url)] })
+      })
       break
+    }
     case 'window-redirect':
       chrome.tabs.update({ url: request.url })
       break
@@ -126,17 +125,17 @@ function findCurrentPagePackages () {
 });
 
 (chrome || browser).tabs.onUpdated.addListener((tabId, info) => {
-  // console.log(tabId, info)
-  if (!info.url) return
-  currentPageResults = brewPackages[toURL(new URL(info.url))] || {}
-  if (JSON.stringify(currentPageResults) === '{}') return updateAvailablePackages(info.url, tabId)
-  updateBadge(tabId)
+  if (!info.url) return findCurrentPagePackages()
+  const urlNoWWW = toURL(new URL(info.url))
+  const pageResults = brewPackages[urlNoWWW]
+  if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
+  updateBadge(urlNoWWW, tabId)
 })
 chrome.tabs.onActivated.addListener(activeInfo => {
   findCurrentPagePackages()
 });
 
-(chrome || browser).browserAction.setPopup({ popup: 'popup/index.html' })
+(chrome || browser).action.setPopup({ popup: 'popup/index.html' })
 
 const config = {
   resetInterval: 3
@@ -145,7 +144,7 @@ const config = {
 setInterval(() => {
   console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
   Object.keys(brewPackages).forEach(key => delete brewPackages[key])
-  currentPageResults = {}
   // Re-populate brewPackages using the current page
-  findCurrentPagePackages()
+  findCurrentPagePackages(false)
 }, config.resetInterval * 60 * 1000)
+findCurrentPagePackages(false)

@@ -8,10 +8,10 @@
 	],
 	"web_accessible_resources": [],
 	"background": {
-		"scripts": ["background.js"]
+		"service_worker": "background.js"
 	},
 	"content_scripts": [],
-	"browser_action": {
+	"action": {
 		"default_title" : "Homebrew Finder",
 		"default_icon" : "icons/pack-icon-inactive.png",
 		"default_popup": ""
@@ -22,5 +22,5 @@
       "48": "icons/pack-icon.png"
 	},
 	"minimum_chrome_version": "80.0.3987",
-	"manifest_version": 2
+	"manifest_version": 3
 }
