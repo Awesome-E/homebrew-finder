@@ -77,7 +77,7 @@ function updateAvailablePackages (url, tabId) {
           type: x.hierarchy.lvl0,
           formula: x.hierarchy.lvl1,
           primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
-          name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Name:\n\s+/, '') : ''
+          name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
         }
       }),
       total_hits: response.results[0].nbHits
