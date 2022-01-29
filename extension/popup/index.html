@@ -5,39 +5,44 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Extension Settings</title>
+  <link rel="stylesheet" href="fontawesome4.min.css">
   <link rel="stylesheet" href="style.css">
+  <script defer src="script.js"></script>
 </head>
 <body>
-  <h1>No Packages Found</h1>
-  <table>
+  <template id="result-template">
+    <tr>
+      <td><a></a></td>
+      <td><a></a></td>
+      <td>
+        <a class="copy hbcopy fa fa-fw fa-terminal" title="Copy Homebrew Install Command"></a>
+        <a class="download fa fa-fw fa-download"></a>
+      </td>
+    </tr>
+  </template>
+  <h1 id="no-packages-found">Homebrew Finder</h1>
+  <p class="nocontent">
+    Sorry, we were unable to find any packages for this website! &#x1F37B;
+  </p>
+  <table class="content results-table" data-type="Casks">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Actions</th>
+        <th>Casks</th>
+        <th></th>
+        <th></th>
       </tr>
     </thead>
-    <tbody>
+    <tbody><tr><td></td><td></td></tr></tbody>
+  </table>
+  <table class="content results-table" data-type="Formulae">
+    <thead>
       <tr>
-        <td>Name</td>
-        <td>Actions</td>
+        <th>Formulae</th>
+        <th></th>
+        <th></th>
       </tr>
-      <tr>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td></td>
-      </tr>
-    </tbody>
+    </thead>
+    <tbody><tr><td></td><td></td></tr></tbody>
   </table>
 </body>
 </html>
