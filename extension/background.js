@@ -5,28 +5,30 @@ function toURL (url /* url object */) {
   // Synonymize www with root domain, then allow search query to contain both
   return url.origin.replace(/\/\/www\./, '//') + url.pathname
 }
-function updateBadge () {
+function updateBadge (tabId) {
   if (!currentPageResults.total_hits) {
-    chrome.browserAction.setBadgeText({ text: '' }, () => {})
-    chrome.browserAction.setIcon({ path: '/icons/pack-icon-inactive-64.png' })
+    chrome.browserAction.setBadgeText({ tabId, text: '' }, () => {})
+    chrome.browserAction.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
     return
   }
   const totalHits = currentPageResults.total_hits
   const primaryHits = currentPageResults.results.filter(r => r.primary).length
-  const badgeConfig = { color: primaryHits ? '#be862d' : '#000', text: String(primaryHits || totalHits) }
-  chrome.browserAction.setBadgeBackgroundColor({ color: badgeConfig.color }, () => {})
-  chrome.browserAction.setBadgeText({ text: badgeConfig.text || '' }, () => {})
-  chrome.browserAction.setIcon({ path: '/icons/pack-icon-64.png' })
+  const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: String(primaryHits || totalHits) }
+  chrome.browserAction.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
+  chrome.browserAction.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
+  chrome.browserAction.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
-function clearResult () {
+function clearResult (tabId) {
   currentPageResults = {}
-  updateBadge()
+  updateBadge(tabId)
 }
 
-function updateAvailablePackages (url) {
+function updateAvailablePackages (url, tabId) {
+  if (!tabId) return console.error(new Error('No Tab ID Provided'))
+
   const xhr = new XMLHttpRequest()
   url = new URL(url)
-  if (brewPackages[url]) return updateBadge() // Package Matches already exist
+  if (brewPackages[url]) return updateBadge(tabId) // Package Matches already exist
   if (!url.protocol.match(/^https?:$/)) return
   xhr.open('POST', 'https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries')
   xhr.addEventListener('load', () => {
@@ -47,7 +49,7 @@ function updateAvailablePackages (url) {
       total_hits: response.results[0].nbHits
     }
     currentPageResults = brewPackages[toURL(url)] = data
-    updateBadge()
+    updateBadge(tabId)
   })
   const headers = {
     'Content-Type': 'application/json',
@@ -102,13 +104,13 @@ function findCurrentPagePackages () {
     lastFocusedWindow: true
   }, function (tabs) {
     const tab = tabs[0]
-    if (!tab || !tab.url) return clearResult()
+    if (!tab || !tab.url) return clearResult(tab.id)
     const url = new URL(tab.url)
-    if (!url.protocol.match(/^https?:$/)) return clearResult()
+    if (!url.protocol.match(/^https?:$/)) return clearResult(tab.id)
     currentPageResults = brewPackages[toURL(url)]
     // If current page is not stored, get packages
-    if (!currentPageResults) return updateAvailablePackages(toURL(url))
-    updateBadge()
+    if (!currentPageResults) return updateAvailablePackages(toURL(url), tab.id)
+    updateBadge(tab.id)
   })
 }
 
@@ -127,8 +129,8 @@ function findCurrentPagePackages () {
   // console.log(tabId, info)
   if (!info.url) return
   currentPageResults = brewPackages[toURL(new URL(info.url))] || {}
-  if (JSON.stringify(currentPageResults) === '{}') return updateAvailablePackages(info.url)
-  updateBadge()
+  if (JSON.stringify(currentPageResults) === '{}') return updateAvailablePackages(info.url, tabId)
+  updateBadge(tabId)
 })
 chrome.tabs.onActivated.addListener(activeInfo => {
   findCurrentPagePackages()
