@@ -158,7 +158,7 @@ api.runtime.onMessage.addListener(async function (request, sender, sendResponse)
 
 api.tabs.onUpdated.addListener((tabId, info) => {
   if (info.status !== 'loading') return
-  if (!info.url) findCurrentPagePackages()
+  if (!info.url) return findCurrentPagePackages()
   const urlNoWWW = URLUtil.toURL(new URL(info.url))
   const pageResults = brewPackages[urlNoWWW]
   if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
