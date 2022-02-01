@@ -36,6 +36,7 @@ const URLUtil = {
     }
   },
   getOrigin: function (url) {
+    if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
     const sitePathData = this.siteSpecificRootPaths[url.hostname.replace(/^www\./, '')]
     if (!sitePathData) return url.origin.replace(/\/\/www\./, '//')
     const sitePath = url.pathname
