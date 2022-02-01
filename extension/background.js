@@ -178,8 +178,13 @@ chrome.tabs.onActivated.addListener(activeInfo => {
 (chrome || browser).action.setPopup({ popup: 'popup/index.html' })
 
 const config = {
-  resetInterval: 3
+  resetInterval: 15
 }
+
+// Keep Service Worker Active
+function ping () {}
+setInterval(() => { ping() }, 60000)
+
 // Reset Temporary Package List
 setInterval(() => {
   console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
