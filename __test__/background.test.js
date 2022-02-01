@@ -50,3 +50,9 @@ test('getOrigin returns root domain for github URLs', () => {
   const result = URLUtil.getOrigin(new URL('https://www.github.com/Awesome-E/homebrew-finder'))
   expect(result).toBe('https://github.com/Awesome-E')
 })
+
+test('updateAvailablePackages returns undefined when no tab is given', () => {
+  const result = updateAvailablePackages('https://brew.sh/')
+  expect(result).toBe(undefined)
+})
+
