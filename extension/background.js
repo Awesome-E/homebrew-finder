@@ -10,6 +10,7 @@ const URLUtil = {
     return url.origin.replace(/\/\/www\./, '//') + url.pathname
   },
   getSearchQuery: function (url, types) {
+    if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
     // Add www to the front of the domain (won't affect search results for subdomains)
     const urlOrigin = this.getOrigin(url)
     const urls = {
