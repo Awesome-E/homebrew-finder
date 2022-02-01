@@ -52,7 +52,8 @@ function updateBadge (url, tabId) {
   }
   const totalHits = pageResults.total_hits
   const primaryHits = pageResults.results.filter(r => r.primary).length
-  const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: String(primaryHits || totalHits) }
+  const hitCount = primaryHits || totalHits
+  const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: hitCount > 999 ? '1k+' : String(hitCount) }
   api.action.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
   api.action.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
   api.action.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
