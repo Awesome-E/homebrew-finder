@@ -144,13 +144,13 @@ if (api) {
         api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
           const tab = tabs[0]
           function exit (url) {
-            updateBadge(url, tab.id)
+            updateBadge(URLUtil.toURL(url), tab.id)
             api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] : {} })
           }
           if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
           const url = new URL(tab.url)
           if (!url.protocol.match(/^https?:$/)) return exit() // Will have zero matches -> disables icon
-          exit()
+          exit(url)
         })
         break
       }
