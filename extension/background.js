@@ -1,4 +1,41 @@
 const brewPackages = {}
+const URLUtil = {
+  toURL,
+  getSearchQuery: function (url, types) {
+    // Add www to the front of the domain (won't affect search results for subdomains)
+    const urlOrigin = this.getOrigin(url)
+    const urls = {
+      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
+      currentOnly_pathed: toURL(url),
+      currentAndSub_pathed: url.hostname + url.pathname,
+      www: urlOrigin.replace(/^(\w+):\/\//, '$1://www.'),
+      currentOnly: urlOrigin,
+      currentAndSub: new URL(urlOrigin).hostname + new URL(urlOrigin).pathname
+    }
+    // Backslash escape period so it works with Algolia
+    Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
+    console.trace('get search query')
+    return types.map(type => JSON.stringify(urls[type])).join(' ')
+  },
+  siteSpecificRootPaths: {
+    'github.com': {
+      preMatchReplacer: {
+        expression: /^\/(about|account|codespaces|collections|dashboard|events|explore|issues|marketplace|new|notifications|organizations|pricing|pulls|settings|sponsors|topics|trending|watching)/,
+        replacement: '/'
+      },
+      // Append Pattern Must match pathname '/'
+      appendPattern: { expression: /^\/[0-9a-zA-Z-]*/ }
+    }
+  },
+  getOrigin: function (url) {
+    const sitePathData = this.siteSpecificRootPaths[url.hostname.replace(/^www\./, '')]
+    if (!sitePathData) return url.origin.replace(/\/\/www\./, '//')
+    const sitePath = url.pathname
+      .replace(sitePathData.preMatchReplacer.expression, sitePathData.preMatchReplacer.replacement)
+      .match(sitePathData.appendPattern.expression)[0]
+    return url.origin.replace(/\/\/www\./, '//') + sitePath
+  }
+}
 function toURL (url /* url object */) {
   if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
   // Synonymize www with root domain, then allow search query to contain both
@@ -26,20 +63,6 @@ function updateAvailablePackages (url, tabId) {
   if (brewPackages[toURL(url)]) return updateBadge(toURL(url), tabId) // Package Matches already exist
   if (!url.protocol.match(/^https?:$/)) return
 
-  function getUrlQuery (types) {
-    // Add www to the front of the domain (won't affect search results for subdomains)
-    const urls = {
-      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
-      currentOnly_pathed: toURL(url),
-      currentAndSub_pathed: url.hostname + url.pathname,
-      www: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}`,
-      currentOnly: url.origin.replace(/\/\/www\./, '//') + '/',
-      currentAndSub: url.hostname
-    }
-    // Backslash escape period so it works with Algolia
-    Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
-    return types.map(type => JSON.stringify(urls[type])).join(' ')
-  }
   fetch('https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries', {
     method: 'POST',
     headers: {
@@ -51,16 +74,16 @@ function updateAvailablePackages (url, tabId) {
       requests: [
         {
           indexName: 'brew_all',
-          query: getUrlQuery(['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
+          query: URLUtil.getSearchQuery(url, ['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
           hitsPerPage: 10,
           facetFilters: '["lang: en", "site: formulae"]',
           advancedSyntax: true
         },
-        (url.pathname !== '/'
+        // Get Root if it hasn't been searched
+        (!brewPackages[URLUtil.getOrigin(url)]
           ? {
-              // Primary Result Query
               indexName: 'brew_all',
-              query: getUrlQuery(['currentOnly_pathed', 'www_pathed']),
+              query: URLUtil.getSearchQuery(url, ['currentOnly', 'www']),
               hitsPerPage: 10,
               facetFilters: '["lang: en", "site: formulae"]',
               advancedSyntax: true
@@ -69,20 +92,36 @@ function updateAvailablePackages (url, tabId) {
       ].filter(q => !!q)
     })
   }).then(r => r.json()).then(response => {
-    const data = {
-      results: response.results[0].hits.filter(x => x.anchor === 'default').map(x => {
-        return {
-          brew_url: x.url,
-          content_url: x.content,
-          type: x.hierarchy.lvl0,
-          formula: x.hierarchy.lvl1,
-          primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
-          name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
-        }
-      }),
-      total_hits: response.results[0].nbHits
-    }
-    brewPackages[toURL(url)] = data
+    const data = response.results.map(result => {
+      return {
+        results: result.hits.filter(x => x.anchor === 'default').map(x => {
+          return {
+            brew_url: x.url,
+            content_url: x.content,
+            type: x.hierarchy.lvl0,
+            formula: x.hierarchy.lvl1,
+            primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
+            name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
+          }
+        }),
+        total_hits: result.nbHits
+      }
+    })
+    // const data = {
+    //   results: response.results[0].hits.filter(x => x.anchor === 'default').map(x => {
+    //     return {
+    //       brew_url: x.url,
+    //       content_url: x.content,
+    //       type: x.hierarchy.lvl0,
+    //       formula: x.hierarchy.lvl1,
+    //       primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
+    //       name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
+    //     }
+    //   }),
+    //   total_hits: response.results[0].nbHits
+    // }
+    brewPackages[toURL(url)] = data[0]
+    if (data[1]) brewPackages[url.origin.replace(/\/\/www\./, '//')] = data[1]
     updateBadge(toURL(url), tabId)
   })
 }
@@ -125,7 +164,8 @@ function findCurrentPagePackages (activeWindowOnly = true) {
 });
 
 (chrome || browser).tabs.onUpdated.addListener((tabId, info) => {
-  if (!info.url) return findCurrentPagePackages()
+  if (info.status !== 'loading') return
+  if (!info.url) findCurrentPagePackages()
   const urlNoWWW = toURL(new URL(info.url))
   const pageResults = brewPackages[urlNoWWW]
   if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
