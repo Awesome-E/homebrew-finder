@@ -1,3 +1,7 @@
+let api = {}
+if (typeof chrome !== 'undefined') api = chrome
+if (typeof browser !== 'undefined') api = browser
+
 const brewPackages = {}
 const URLUtil = {
   toURL: function (url /* url object */) {
@@ -18,7 +22,6 @@ const URLUtil = {
     }
     // Backslash escape period so it works with Algolia
     Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
-    console.trace('get search query')
     return types.map(type => JSON.stringify(urls[type])).join(' ')
   },
   siteSpecificRootPaths: {
@@ -43,16 +46,16 @@ const URLUtil = {
 function updateBadge (url, tabId) {
   const pageResults = brewPackages[url] || {}
   if (!pageResults.total_hits) {
-    chrome.action.setBadgeText({ tabId, text: '' }, () => {})
-    chrome.action.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
+    api.action.setBadgeText({ tabId, text: '' }, () => {})
+    api.action.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
     return
   }
   const totalHits = pageResults.total_hits
   const primaryHits = pageResults.results.filter(r => r.primary).length
   const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: String(primaryHits || totalHits) }
-  chrome.action.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
-  chrome.action.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
-  chrome.action.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
+  api.action.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
+  api.action.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
+  api.action.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
 
 function updateAvailablePackages (url, tabId) {
@@ -113,7 +116,7 @@ function updateAvailablePackages (url, tabId) {
 }
 
 function findCurrentPagePackages (activeWindowOnly = true) {
-  chrome.tabs.query({
+  api.tabs.query({
     active: true,
     lastFocusedWindow: activeWindowOnly
   }, function (tabs) {
@@ -129,39 +132,39 @@ function findCurrentPagePackages (activeWindowOnly = true) {
   })
 }
 
-(chrome || browser).runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+api.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
   switch (request.type) {
     case 'get-site-packages': {
       // Always received from popup -> will always query active tab
       sendResponse({ message: 'request received' })
-      chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+      api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
         const tab = tabs[0]
         if (!tab || !tab.url) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
         const url = new URL(tab.url)
-        if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id); // Will have zero matches -> disables icon
-        (chrome || browser).runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[URLUtil.toURL(url)] })
+        if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
+        api.runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[URLUtil.toURL(url)] })
       })
       break
     }
     case 'window-redirect':
-      chrome.tabs.update({ url: request.url })
+      api.tabs.update({ url: request.url })
       break
   }
-});
+})
 
-(chrome || browser).tabs.onUpdated.addListener((tabId, info) => {
+api.tabs.onUpdated.addListener((tabId, info) => {
   if (info.status !== 'loading') return
   if (!info.url) findCurrentPagePackages()
   const urlNoWWW = URLUtil.toURL(new URL(info.url))
   const pageResults = brewPackages[urlNoWWW]
   if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
   updateBadge(urlNoWWW, tabId)
-});
-(chrome || browser).tabs.onActivated.addListener(activeInfo => {
+})
+api.tabs.onActivated.addListener(activeInfo => {
   findCurrentPagePackages()
-});
+})
 
-(chrome || browser).action.setPopup({ popup: 'popup/index.html' })
+api.action.setPopup({ popup: 'popup/index.html' })
 
 const config = {
   resetInterval: 15
