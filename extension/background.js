@@ -1,4 +1,4 @@
-let api = {}
+let api = null
 if (typeof chrome !== 'undefined') api = chrome
 if (typeof browser !== 'undefined') api = browser
 
@@ -134,59 +134,61 @@ function findCurrentPagePackages (activeWindowOnly = true) {
   })
 }
 
-api.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
-  switch (request.type) {
-    case 'get-site-packages': {
-      // Always received from popup -> will always query active tab
-      sendResponse({ message: 'request received' })
-      api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
-        const tab = tabs[0]
-        function exit (url) {
-          updateBadge(url, tab.id)
-          api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] : {} })
-        }
-        if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
-        const url = new URL(tab.url)
-        if (!url.protocol.match(/^https?:$/)) return exit() // Will have zero matches -> disables icon
-        exit()
-      })
-      break
+if (api) {
+  api.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+    switch (request.type) {
+      case 'get-site-packages': {
+        // Always received from popup -> will always query active tab
+        sendResponse({ message: 'request received' })
+        api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+          const tab = tabs[0]
+          function exit (url) {
+            updateBadge(url, tab.id)
+            api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] : {} })
+          }
+          if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
+          const url = new URL(tab.url)
+          if (!url.protocol.match(/^https?:$/)) return exit() // Will have zero matches -> disables icon
+          exit()
+        })
+        break
+      }
+      case 'window-redirect':
+        api.tabs.update({ url: request.url })
+        break
     }
-    case 'window-redirect':
-      api.tabs.update({ url: request.url })
-      break
+  })
+
+  api.tabs.onUpdated.addListener((tabId, info) => {
+    if (info.status !== 'loading') return
+    if (!info.url) return findCurrentPagePackages()
+    const urlNoWWW = URLUtil.toURL(new URL(info.url))
+    const pageResults = brewPackages[urlNoWWW]
+    if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
+    updateBadge(urlNoWWW, tabId)
+  })
+  api.tabs.onActivated.addListener(activeInfo => {
+    findCurrentPagePackages()
+  })
+
+  api.action.setPopup({ popup: 'popup/index.html' })
+
+  const config = {
+    resetInterval: 15
   }
-})
 
-api.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status !== 'loading') return
-  if (!info.url) return findCurrentPagePackages()
-  const urlNoWWW = URLUtil.toURL(new URL(info.url))
-  const pageResults = brewPackages[urlNoWWW]
-  if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
-  updateBadge(urlNoWWW, tabId)
-})
-api.tabs.onActivated.addListener(activeInfo => {
-  findCurrentPagePackages()
-})
+  // Keep Service Worker Active
+  function ping () {}
+  setInterval(() => { ping() }, 60000)
 
-api.action.setPopup({ popup: 'popup/index.html' })
-
-const config = {
-  resetInterval: 15
-}
-
-// Keep Service Worker Active
-function ping () {}
-setInterval(() => { ping() }, 60000)
-
-// Reset Temporary Package List
-setInterval(() => {
-  console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
-  Object.keys(brewPackages).forEach(key => delete brewPackages[key])
-  // Re-populate brewPackages using the current page
+  // Reset Temporary Package List
+  setInterval(() => {
+    console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
+    Object.keys(brewPackages).forEach(key => delete brewPackages[key])
+    // Re-populate brewPackages using the current page
+    findCurrentPagePackages(false)
+  }, config.resetInterval * 60 * 1000)
   findCurrentPagePackages(false)
-}, config.resetInterval * 60 * 1000)
-findCurrentPagePackages(false)
+}
 
 if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages }

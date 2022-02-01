@@ -13,7 +13,9 @@
   },
   "globals": {
     "chrome": "readonly",
-    "browser": "readonly"
+    "browser": "readonly",
+    "test": "readonly",
+    "expect": "readonly"
   },
   "rules": {
   }
