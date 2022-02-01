@@ -44,7 +44,7 @@ const URLUtil = {
   }
 }
 function updateBadge (url, tabId) {
-  const pageResults = brewPackages[url] || {}
+  const pageResults = url ? (brewPackages[url] || {}) : {}
   if (!pageResults.total_hits) {
     api.action.setBadgeText({ tabId, text: '' }, () => {})
     api.action.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
@@ -139,10 +139,14 @@ api.runtime.onMessage.addListener(async function (request, sender, sendResponse)
       sendResponse({ message: 'request received' })
       api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
         const tab = tabs[0]
-        if (!tab || !tab.url) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
+        function exit (url) {
+          updateBadge(url, tab.id)
+          api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] : {} })
+        }
+        if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
         const url = new URL(tab.url)
-        if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
-        api.runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[URLUtil.toURL(url)] })
+        if (!url.protocol.match(/^https?:$/)) return exit() // Will have zero matches -> disables icon
+        exit()
       })
       break
     }
