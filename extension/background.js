@@ -1,12 +1,16 @@
 const brewPackages = {}
 const URLUtil = {
-  toURL,
+  toURL: function (url /* url object */) {
+    if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
+    // Synonymize www with root domain, then allow search query to contain both
+    return url.origin.replace(/\/\/www\./, '//') + url.pathname
+  },
   getSearchQuery: function (url, types) {
     // Add www to the front of the domain (won't affect search results for subdomains)
     const urlOrigin = this.getOrigin(url)
     const urls = {
       www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
-      currentOnly_pathed: toURL(url),
+      currentOnly_pathed: this.toURL(url),
       currentAndSub_pathed: url.hostname + url.pathname,
       www: urlOrigin.replace(/^(\w+):\/\//, '$1://www.'),
       currentOnly: urlOrigin,
@@ -36,11 +40,6 @@ const URLUtil = {
     return url.origin.replace(/\/\/www\./, '//') + sitePath
   }
 }
-function toURL (url /* url object */) {
-  if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
-  // Synonymize www with root domain, then allow search query to contain both
-  return url.origin.replace(/\/\/www\./, '//') + url.pathname
-}
 function updateBadge (url, tabId) {
   const pageResults = brewPackages[url] || {}
   if (!pageResults.total_hits) {
@@ -60,7 +59,7 @@ function updateAvailablePackages (url, tabId) {
   if (!tabId) return console.error(new Error('No Tab ID Provided'))
 
   url = new URL(url)
-  if (brewPackages[toURL(url)]) return updateBadge(toURL(url), tabId) // Package Matches already exist
+  if (brewPackages[URLUtil.toURL(url)]) return updateBadge(URLUtil.toURL(url), tabId) // Package Matches already exist
   if (!url.protocol.match(/^https?:$/)) return
 
   fetch('https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries', {
@@ -100,29 +99,16 @@ function updateAvailablePackages (url, tabId) {
             content_url: x.content,
             type: x.hierarchy.lvl0,
             formula: x.hierarchy.lvl1,
-            primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
+            primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ URLUtil.toURL(new URL(x.content)) === URLUtil.toURL(url),
             name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
           }
         }),
         total_hits: result.nbHits
       }
     })
-    // const data = {
-    //   results: response.results[0].hits.filter(x => x.anchor === 'default').map(x => {
-    //     return {
-    //       brew_url: x.url,
-    //       content_url: x.content,
-    //       type: x.hierarchy.lvl0,
-    //       formula: x.hierarchy.lvl1,
-    //       primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ toURL(new URL(x.content)) === toURL(url),
-    //       name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
-    //     }
-    //   }),
-    //   total_hits: response.results[0].nbHits
-    // }
-    brewPackages[toURL(url)] = data[0]
+    brewPackages[URLUtil.toURL(url)] = data[0]
     if (data[1]) brewPackages[url.origin.replace(/\/\/www\./, '//')] = data[1]
-    updateBadge(toURL(url), tabId)
+    updateBadge(URLUtil.toURL(url), tabId)
   })
 }
 
@@ -135,10 +121,10 @@ function findCurrentPagePackages (activeWindowOnly = true) {
       if (!tab || !tab.url) return
       const url = new URL(tab.url)
       if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
-      const pageResults = brewPackages[toURL(url)]
+      const pageResults = brewPackages[URLUtil.toURL(url)]
       // If current page is not stored, get packages
-      if (!pageResults) return updateAvailablePackages(toURL(url), tab.id)
-      updateBadge(toURL(url), tab.id)
+      if (!pageResults) return updateAvailablePackages(URLUtil.toURL(url), tab.id)
+      updateBadge(URLUtil.toURL(url), tab.id)
     })
   })
 }
@@ -153,7 +139,7 @@ function findCurrentPagePackages (activeWindowOnly = true) {
         if (!tab || !tab.url) return updateBadge(tab.url, tab.id) // Will have zero matches -> disables icon
         const url = new URL(tab.url)
         if (!url.protocol.match(/^https?:$/)) return updateBadge(tab.url, tab.id); // Will have zero matches -> disables icon
-        (chrome || browser).runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[toURL(url)] })
+        (chrome || browser).runtime.sendMessage({ type: 'send-site-packages', data: brewPackages[URLUtil.toURL(url)] })
       })
       break
     }
@@ -166,12 +152,12 @@ function findCurrentPagePackages (activeWindowOnly = true) {
 (chrome || browser).tabs.onUpdated.addListener((tabId, info) => {
   if (info.status !== 'loading') return
   if (!info.url) findCurrentPagePackages()
-  const urlNoWWW = toURL(new URL(info.url))
+  const urlNoWWW = URLUtil.toURL(new URL(info.url))
   const pageResults = brewPackages[urlNoWWW]
   if (!pageResults) return updateAvailablePackages(urlNoWWW, tabId)
   updateBadge(urlNoWWW, tabId)
-})
-chrome.tabs.onActivated.addListener(activeInfo => {
+});
+(chrome || browser).tabs.onActivated.addListener(activeInfo => {
   findCurrentPagePackages()
 });
 
@@ -193,3 +179,5 @@ setInterval(() => {
   findCurrentPagePackages(false)
 }, config.resetInterval * 60 * 1000)
 findCurrentPagePackages(false)
+
+if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages }
