@@ -28,11 +28,11 @@ const URLUtil = {
   siteSpecificRootPaths: {
     'github.com': {
       preMatchReplacer: {
-        expression: /^\/(about|account|codespaces|collections|dashboard|events|explore|issues|marketplace|new|notifications|organizations|pricing|pulls|settings|sponsors|topics|trending|watching)/,
+        expression: /^\/(about|account|codespaces|collections|dashboard|events|explore|issues|marketplace|new|notifications|pricing|pulls|settings|sponsors|topics|trending|watching)/,
         replacement: '/'
       },
       // Append Pattern Must match pathname '/'
-      appendPattern: { expression: /^\/[0-9a-zA-Z-]*/ }
+      appendPattern: { expression: /^(?:\/organizations|\/orgs)?(\/[0-9a-zA-Z-]*)/ }
     }
   },
   getOrigin: function (url) {
@@ -152,8 +152,8 @@ if (api) {
         api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
           const tab = tabs[0]
           function exit (url) {
-            updateBadge(URLUtil.toURL(url), tab.id)
-            api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] : {} })
+            updateBadge(url ? URLUtil.toURL(url) : undefined, tab.id)
+            api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] || {} : {} })
           }
           if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
           const url = new URL(tab.url)
