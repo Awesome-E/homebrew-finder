@@ -46,6 +46,7 @@ const URLUtil = {
   }
 }
 function updateBadge (url, tabId) {
+  if (!api) return
   const pageResults = url ? (brewPackages[url] || {}) : {}
   if (!pageResults.total_hits) {
     api.action.setBadgeText({ tabId, text: '' }, () => {})
@@ -62,11 +63,18 @@ function updateBadge (url, tabId) {
 }
 
 function updateAvailablePackages (url, tabId) {
-  if (!tabId) return console.error(new Error('No Tab ID Provided'))
-
+  if (!tabId) {
+    console.error(new Error('No Tab ID Provided'))
+    return { error: 'No tab ID provided' }
+  }
   url = new URL(url)
-  if (brewPackages[URLUtil.toURL(url)]) return updateBadge(URLUtil.toURL(url), tabId) // Package Matches already exist
-  if (!url.protocol.match(/^https?:$/)) return
+  if (brewPackages[URLUtil.toURL(url)]) {
+    updateBadge(URLUtil.toURL(url), tabId) // Package Matches already exist
+    return { message: 'URL already searched, updating badge' }
+  }
+  if (!url.protocol.match(/^https?:$/)) {
+    return { error: 'URL is not http or https' }
+  }
 
   fetch('https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries', {
     method: 'POST',
@@ -105,7 +113,7 @@ function updateAvailablePackages (url, tabId) {
             content_url: x.content,
             type: x.hierarchy.lvl0,
             formula: x.hierarchy.lvl1,
-            primary: /* response.results[1] ? response.results[1].hits.some(primaryResult => primaryResult.url === x.url) : */ URLUtil.toURL(new URL(x.content)) === URLUtil.toURL(url),
+            primary: URLUtil.toURL(new URL(x.content)) === URLUtil.toURL(url),
             name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
           }
         }),
@@ -192,4 +200,4 @@ if (api) {
   findCurrentPagePackages(false)
 }
 
-if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages }
+if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages, brewPackages, api }
