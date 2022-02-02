@@ -200,4 +200,4 @@ if (api) {
   findCurrentPagePackages(false)
 }
 
-if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages, brewPackages, api }
+if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages }
