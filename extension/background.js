@@ -125,7 +125,7 @@ function updateAvailablePackages (url, tabId) {
       }
     })
     brewPackages[URLUtil.toURL(url)] = data[0]
-    if (data[1]) brewPackages[url.origin.replace(/\/\/www\./, '//')] = data[1]
+    if (data[1]) brewPackages[URLUtil.getOrigin(url)] = data[1]
     updateBadge(URLUtil.toURL(url), tabId)
   })
 }
@@ -156,22 +156,23 @@ function refreshPackageList () {
 const config = {
   refreshInterval: null
 }
-api.storage.sync.get({
-  options: {
-    root_search: 'always',
-    subdomain_search: 'always',
-    page_search: 'always',
-    results_per: 10,
-    cache_hrs: 12
-  }
-}, data => {
-  Object.assign(config, data.options)
-  // Reset Temporary Package List
-  if (config.refreshInterval) clearInterval(config.refreshInterval)
-  config.refreshInterval = setInterval(refreshPackageList, config.cache_hrs * 3600 * 1000)
-})
 
 if (api) {
+  api.storage.sync.get({
+    options: {
+      root_search: 'always',
+      subdomain_search: 'always',
+      page_search: 'always',
+      results_per: 10,
+      cache_hrs: 12
+    }
+  }, data => {
+    Object.assign(config, data.options)
+    // Reset Temporary Package List
+    if (config.refreshInterval) clearInterval(config.refreshInterval)
+    config.refreshInterval = setInterval(refreshPackageList, config.cache_hrs * 3600 * 1000)
+  })
+
   api.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     switch (request.type) {
       case 'get-site-packages': {
