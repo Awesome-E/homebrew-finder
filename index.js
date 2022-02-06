@@ -17,11 +17,11 @@ console.log('\x1b[32mBuild successful\x1b[0m')
 
 if (process.argv.indexOf('--watch') > -1) {
   watch('extension', { recursive: true }, function (evt, name) {
-    console.log('\x1b[36mRebuilding due to changes\x1b[0m')
+    console.log('\x1b[36mRebuilding due to changes\x1b[0m', `(${name})`)
     build()
   })
   watch('manifest.js', { recursive: true }, function (evt, name) {
-    console.log('\x1b[36mRebuilding due to changes\x1b[0m')
+    console.log('\x1b[36mRebuilding due to changes\x1b[0m', `(${name})`)
     build()
   })
 }
