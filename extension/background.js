@@ -92,7 +92,7 @@ function updateAvailablePackages (url, tabId) {
         {
           indexName: 'brew_all',
           query: URLUtil.getSearchQuery(url, ['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
-          hitsPerPage: 10,
+          hitsPerPage: config.results_per,
           facetFilters: '["lang: en", "site: formulae"]',
           advancedSyntax: true
         },
@@ -101,7 +101,7 @@ function updateAvailablePackages (url, tabId) {
           ? {
               indexName: 'brew_all',
               query: URLUtil.getSearchQuery(url, ['currentOnly', 'www']),
-              hitsPerPage: 10,
+              hitsPerPage: config.results_per,
               facetFilters: '["lang: en", "site: formulae"]',
               advancedSyntax: true
             }
@@ -146,6 +146,30 @@ function findCurrentPagePackages (activeWindowOnly = true) {
     })
   })
 }
+function refreshPackageList () {
+  console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
+  Object.keys(brewPackages).forEach(key => delete brewPackages[key])
+  // Re-populate brewPackages using the current pages
+  findCurrentPagePackages(false)
+}
+
+const config = {
+  refreshInterval: null
+}
+api.storage.sync.get({
+  options: {
+    root_search: 'always',
+    subdomain_search: 'always',
+    page_search: 'always',
+    results_per: 10,
+    cache_hrs: 12
+  }
+}, data => {
+  Object.assign(config, data.options)
+  // Reset Temporary Package List
+  if (config.refreshInterval) clearInterval(config.refreshInterval)
+  config.refreshInterval = setInterval(refreshPackageList, config.cache_hrs * 3600 * 1000)
+})
 
 if (api) {
   api.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
@@ -166,9 +190,17 @@ if (api) {
         })
         break
       }
-      case 'window-redirect':
+      case 'window-redirect': {
         api.tabs.update({ url: request.url })
         break
+      }
+      case 'update-settings': {
+        Object.assign(config, request.data)
+        if (config.refreshInterval) clearInterval(config.refreshInterval)
+        config.refreshInterval = setInterval(refreshPackageList, config.cache_hrs * 3600 * 1000)
+        refreshPackageList()
+        break
+      }
     }
   })
 
@@ -186,21 +218,10 @@ if (api) {
 
   api[browserAction].setPopup({ popup: 'popup/index.html' })
 
-  const config = {
-    resetInterval: 15
-  }
-
   // Keep Service Worker Active
   function ping () {}
   setInterval(() => { ping() }, 60000)
 
-  // Reset Temporary Package List
-  setInterval(() => {
-    console.log('%cResetting Temporary Package List...', 'color: #f9d094; background-color: #2e2a24; padding: 4px 10px; border: 3px solid #2f2f2e;')
-    Object.keys(brewPackages).forEach(key => delete brewPackages[key])
-    // Re-populate brewPackages using the current page
-    findCurrentPagePackages(false)
-  }, config.resetInterval * 60 * 1000)
   findCurrentPagePackages(false)
 }
 

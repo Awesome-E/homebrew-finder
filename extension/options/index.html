@@ -19,7 +19,7 @@
     <label><input type="radio" name="root_search" value="never"> Never</label>
   </div>
   <div class="option">
-    <h3>Search for packages in a website&rsquo;s subdomains</h3>
+    <h3>Search for packages in subdomains</h3>
     <label><input type="radio" name="subdomain_search" value="always"> Every time I visit a new website</label>
     <label><input type="radio" name="subdomain_search" value="manually"> When I click the extension</label>
     <label><input type="radio" name="subdomain_search" value="never"> Never</label>
@@ -32,8 +32,12 @@
   </div>
   <h2 class="section-header">Search Configuration</h2>
   <div class="option">
-    <h3>Search for exact page matches</h3>
     <label>Max results per query: <input id="results_per" type="number" name="results_per"></label>
+    <label>Package Search Cache (hours): <input id="cache_hrs" type="number" name="cache_hrs"></label>
+  </div>
+  <br>
+  <div>
+    <button id="reset">Restore Defaults</button>
   </div>
 </body>
 </html>

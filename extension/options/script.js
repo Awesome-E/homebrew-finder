@@ -11,7 +11,8 @@ api.storage.sync.get({
     root_search: 'always',
     subdomain_search: 'always',
     page_search: 'always',
-    results_per: 10
+    results_per: 10,
+    cache_hrs: 12
   }
 }, function (items) {
   const data = items.options
@@ -62,5 +63,13 @@ document.addEventListener('input', () => {
         break
     }
   })
-  api.storage.sync.set({ options: data })
+  api.storage.sync.set({ options: data }, () => {
+    api.runtime.sendMessage({ type: 'update-settings', data })
+  })
 })
+
+function resetPrefs () {
+  if (!confirm('Are you sure you want to restore defaults? This action cannot be undone!')) return
+  api.storage.sync.set({ options: {} }, () => location.reload())
+}
+document.getElementById('reset').addEventListener('click', resetPrefs)

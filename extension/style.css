@@ -77,6 +77,25 @@ p {
   font-size: 1.2em;
 }
 
+button {
+  background: rgba(162,107,20,0.3);
+  padding: 8px 10px 6px;
+  border-radius: 0.4em;
+  box-shadow: 0 0 5px rgb(0 0 0 / 40%);
+  border: none;
+  color: var(--text-primary);
+  transition: opacity 0.2s;
+}
+button:hover {
+  opacity: 0.92;
+}
+button:active {
+  opacity: 0.8;
+}
+button:focus {
+  outline: 1px dotted #d3a459;
+}
+
 h2.section-header {
   border-bottom: 1px solid white;
   padding-bottom: 0.25em;
