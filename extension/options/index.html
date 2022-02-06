@@ -32,8 +32,23 @@
   </div>
   <h2 class="section-header">Search Configuration</h2>
   <div class="option">
-    <label>Max results per query: <input id="results_per" type="number" name="results_per"></label>
+    <label>Max results per query: <input id="results_per" type="number" name="results_per" min="1" step="1"></label>
+  </div>
+  <div class="option">
     <label>Package Search Cache (hours): <input id="cache_hrs" type="number" name="cache_hrs"></label>
+  </div>
+  <h2 class="section-header">Navigation</h2>
+  <div class="option">
+    <h3>When clicking on a package formula</h3>
+    <label><input type="radio" name="page_search" value="always"> Open formula page in a new tab</label>
+    <label><input type="radio" name="page_search" value="manually"> Open formula in current tab</label>
+    <label><input type="radio" name="page_search" value="never"> Do nothing</label>
+  </div>
+  <div class="option">
+    <h3>When clicking on a package name</h3>
+    <label><input type="radio" name="page_search" value="always"> Open package website in a new tab</label>
+    <label><input type="radio" name="page_search" value="manually"> Open package website in current tab</label>
+    <label><input type="radio" name="page_search" value="never"> Do nothing</label>
   </div>
   <br>
   <div>

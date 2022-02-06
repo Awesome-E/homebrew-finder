@@ -9,7 +9,7 @@ if (typeof browser !== 'undefined') api = browser
 api.storage.sync.get({
   options: {
     root_search: 'always',
-    subdomain_search: 'always',
+    subdomain_search: 'never',
     page_search: 'always',
     results_per: 10,
     cache_hrs: 12
@@ -64,12 +64,14 @@ document.addEventListener('input', () => {
     }
   })
   api.storage.sync.set({ options: data }, () => {
-    api.runtime.sendMessage({ type: 'update-settings', data })
+    api.runtime.sendMessage({ type: 'update-settings', data }, () => {})
   })
 })
 
 function resetPrefs () {
   if (!confirm('Are you sure you want to restore defaults? This action cannot be undone!')) return
-  api.storage.sync.set({ options: {} }, () => location.reload())
+  api.storage.sync.set({ options: {} }, () => {
+    api.runtime.sendMessage({ type: 'update-settings', data: {} }, () => location.reload())
+  })
 }
 document.getElementById('reset').addEventListener('click', resetPrefs)
