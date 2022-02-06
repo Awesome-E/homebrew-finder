@@ -20,7 +20,7 @@ const URLUtil = {
     const urls = {
       www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname.replace(/^\/$/, '')}`,
       currentOnly_pathed: this.toURL(url),
-      currentAndSub_pathed: url.hostname + url.pathname.replace(/^\/$/, ''),
+      currentAndSub_pathed: new URL(urlOrigin).hostname + url.pathname.replace(/^\/$/, ''),
       www: urlOrigin.replace(/^(\w+):\/\//, '$1://www.'),
       currentOnly: urlOrigin,
       currentAndSub: new URL(urlOrigin).hostname + new URL(urlOrigin).pathname.replace(/^\/$/, '')
@@ -51,7 +51,7 @@ const URLUtil = {
 }
 function updateBadge (url, tabId) {
   if (!api) return
-  const pageResults = url ? (brewPackages[url] || {}) : {}
+  const pageResults = url ? (brewPackages[url] || brewPackages[URLUtil.getOrigin(new URL(url))] || {}) : {}
   if (!pageResults.total_hits) {
     api[browserAction].setBadgeText({ tabId, text: '' }, () => {})
     api[browserAction].setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
@@ -66,6 +66,43 @@ function updateBadge (url, tabId) {
   api[browserAction].setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
 
+function getSearchRequests (url, config) {
+  // only called if page has not been searched yet
+  if (Object.getPrototypeOf(url).constructor.name !== 'URL') return { error: 'url is not of constructor URL' }
+  const rootWasSearched = !!brewPackages[URLUtil.getOrigin(url)]
+  const searchTypes = {}
+  // Every new page visit will search this term
+  searchTypes.page = [].concat(
+    config.page_search === 'always' ? ['currentOnly_pathed', 'www_pathed'] : [],
+    config.root_search === 'always' ? ['currentOnly', 'www'] : [],
+    config.subdomain_search === 'always' ? ['currentAndSub'] : []
+  )
+  if (config.page_search === 'always' && config.subdomain_search === 'always') {
+    // Insert one before the end
+    searchTypes.page.splice(-1, 0, 'currentAndSub_pathed')
+  }
+  if (config.root_search === 'always' || config.subdomain_search === 'always') {
+    searchTypes.root = [].concat(
+      config.root_search === 'always' ? ['currentOnly', 'www'] : [],
+      config.subdomain_search === 'always' ? ['currentAndSub'] : []
+    )
+  }
+  const baseQuery = {
+    indexName: 'brew_all',
+    hitsPerPage: config.results_per,
+    facetFilters: '["lang: en", "site: formulae"]',
+    advancedSyntax: true
+  }
+  const pageQuery = Object.assign({ query: URLUtil.getSearchQuery(url, searchTypes.page) }, baseQuery)
+  if (config.page_search !== 'always') {
+    pageQuery.hitsPerPage = 0
+    pageQuery.query = ''
+  }
+  const rootQuery = searchTypes.root && !rootWasSearched
+    ? Object.assign({ query: URLUtil.getSearchQuery(url, searchTypes.root) }, baseQuery)
+    : null
+  return [pageQuery, rootQuery].filter(q => !!q)
+}
 function updateAvailablePackages (url, tabId) {
   if (!tabId) {
     console.error(new Error('No Tab ID Provided'))
@@ -80,6 +117,9 @@ function updateAvailablePackages (url, tabId) {
     return { error: 'URL is not http or https' }
   }
 
+  const requests = getSearchRequests(url, config)
+  if (requests.length === 1 && requests[0].hitsPerPage === 0) return { message: 'Nothing to search' }
+
   fetch('https://bh4d9od16a-dsn.algolia.net/1/indexes/*/queries', {
     method: 'POST',
     headers: {
@@ -87,29 +127,9 @@ function updateAvailablePackages (url, tabId) {
       'x-algolia-application-id': 'BH4D9OD16A',
       'x-algolia-api-key': 'a57ef92bf2adfae863a201ee43d6b5a1'
     },
-    body: JSON.stringify({
-      requests: [
-        {
-          indexName: 'brew_all',
-          query: URLUtil.getSearchQuery(url, ['currentOnly_pathed', 'currentOnly', 'www_pathed', 'www']),
-          hitsPerPage: config.results_per,
-          facetFilters: '["lang: en", "site: formulae"]',
-          advancedSyntax: true
-        },
-        // Get Root if it hasn't been searched
-        (!brewPackages[URLUtil.getOrigin(url)]
-          ? {
-              indexName: 'brew_all',
-              query: URLUtil.getSearchQuery(url, ['currentOnly', 'www']),
-              hitsPerPage: config.results_per,
-              facetFilters: '["lang: en", "site: formulae"]',
-              advancedSyntax: true
-            }
-          : undefined)
-      ].filter(q => !!q)
-    })
+    body: JSON.stringify({ requests })
   }).then(r => r.json()).then(response => {
-    const data = response.results.map(result => {
+    const data = response.results.map((result, index) => {
       return {
         results: result.hits.filter(x => x.anchor === 'default').map(x => {
           return {
@@ -121,10 +141,10 @@ function updateAvailablePackages (url, tabId) {
             name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
           }
         }),
-        total_hits: result.nbHits
+        total_hits: requests[index].hitsPerPage ? result.nbHits : 0
       }
     })
-    brewPackages[URLUtil.toURL(url)] = data[0]
+    if (requests[0].hitsPerPage) brewPackages[URLUtil.toURL(url)] = data[0]
     if (data[1]) brewPackages[URLUtil.getOrigin(url)] = data[1]
     updateBadge(URLUtil.toURL(url), tabId)
   })
@@ -161,7 +181,7 @@ if (api) {
   api.storage.sync.get({
     options: {
       root_search: 'always',
-      subdomain_search: 'always',
+      subdomain_search: 'never',
       page_search: 'always',
       results_per: 10,
       cache_hrs: 12
@@ -182,7 +202,8 @@ if (api) {
           const tab = tabs[0]
           function exit (url) {
             updateBadge(url ? URLUtil.toURL(url) : undefined, tab.id)
-            api.runtime.sendMessage({ type: 'send-site-packages', data: url ? brewPackages[URLUtil.toURL(url)] || {} : {} })
+            const data = url ? brewPackages[URLUtil.toURL(url)] || brewPackages[URLUtil.getOrigin(url)] || {} : {}
+            api.runtime.sendMessage({ type: 'send-site-packages', data })
           }
           if (!tab || !tab.url) return exit() // Will have zero matches -> disables icon
           const url = new URL(tab.url)
@@ -193,6 +214,7 @@ if (api) {
       }
       case 'window-redirect': {
         api.tabs.update({ url: request.url })
+        sendResponse({ message: 'success' })
         break
       }
       case 'update-settings': {
@@ -200,6 +222,7 @@ if (api) {
         if (config.refreshInterval) clearInterval(config.refreshInterval)
         config.refreshInterval = setInterval(refreshPackageList, config.cache_hrs * 3600 * 1000)
         refreshPackageList()
+        sendResponse({ message: 'success' })
         break
       }
     }
@@ -226,4 +249,4 @@ if (api) {
   findCurrentPagePackages(false)
 }
 
-if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages }
+if (typeof module !== 'undefined') module.exports = { URLUtil, updateAvailablePackages, getSearchRequests }

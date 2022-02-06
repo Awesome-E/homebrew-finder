@@ -53,6 +53,10 @@ describe('getSearchQuery returns the correct values', () => {
     const result2 = URLUtil.getSearchQuery(new URL('https://brew.sh'), ['www_pathed', 'currentOnly_pathed', 'currentAndSub_pathed'])
     expect(result2).toBe('"https://www\\\\.brew\\\\.sh" "https://brew\\\\.sh" "brew\\\\.sh"')
   })
+  test('currentAndSub should strip www', () => {
+    const result = URLUtil.getSearchQuery(new URL('https://www.google.com/chrome'), ['currentAndSub', 'currentAndSub_pathed'])
+    expect(result).toBe('"google\\\\.com" "google\\\\.com/chrome"')
+  })
 })
 
 describe('getOrigin returns the correct values', () => {
@@ -86,8 +90,8 @@ describe('updateAvailablePackages returns the correct values', () => {
     const result = updateAvailablePackages(new URL('chrome-extension://extension-id/'), -1)
     expect(result).toEqual({ error: 'URL is not http or https' })
   })
-  test('undefined when page has not yet been searched', async () => {
+  test('nothing to search when page has not yet been searched but no queries', async () => {
     const result = updateAvailablePackages(new URL('https://www.google.com/'), -1)
-    expect(result).toEqual(undefined)
+    expect(result).toEqual({ message: 'Nothing to search' })
   })
 })
