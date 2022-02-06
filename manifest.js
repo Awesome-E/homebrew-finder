@@ -5,7 +5,8 @@ module.exports = function (isFF) {
     version: '0.1',
     permissions: [
       'activeTab',
-      'tabs'
+      'tabs',
+      'storage'
     ],
     web_accessible_resources: [],
     background: isFF ? { scripts: ['background.js'] } : { service_worker: 'background.js' },
@@ -16,7 +17,8 @@ module.exports = function (isFF) {
       48: 'icons/pack-icon-48.png'
     },
     minimum_chrome_version: '80.0.3987',
-    manifest_version: isFF ? 2 : 3
+    manifest_version: isFF ? 2 : 3,
+    options_page: './options/index.html'
   }
   if (isFF) manifest.browser_specific_settings = { gecko: { id: '{b8f1f5ea-0b21-47d1-bb89-d2e41507819a}' } }
   manifest[isFF ? 'browser_action' : 'action'] = {

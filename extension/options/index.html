@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extension Settings</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <h1>Settings</h1>
+  <h2 class="section-header">Background Search Frequency</h2>
+  <div class="option">
+    <h3>Search for packages in a website</h3>
+    <label><input type="radio" name="root_search" value="always"> Every time I visit a new website</label>
+    <label><input type="radio" name="root_search" value="manually"> When I click the extension</label>
+    <label><input type="radio" name="root_search" value="never"> Never</label>
+  </div>
+  <div class="option">
+    <h3>Search for packages in a website&rsquo;s subdomains</h3>
+    <label><input type="radio" name="subdomain_search" value="always"> Every time I visit a new website</label>
+    <label><input type="radio" name="subdomain_search" value="manually"> When I click the extension</label>
+    <label><input type="radio" name="subdomain_search" value="never"> Never</label>
+  </div>
+  <div class="option">
+    <h3>Search for exact page matches</h3>
+    <label><input type="radio" name="page_search" value="always"> Every time I visit a new website</label>
+    <label><input type="radio" name="page_search" value="manually"> When I click the extension</label>
+    <label><input type="radio" name="page_search" value="never"> Never</label>
+  </div>
+  <h2 class="section-header">Search Configuration</h2>
+  <div class="option">
+    <h3>Search for exact page matches</h3>
+    <label>Max results per query: <input id="results_per" type="number" name="results_per"></label>
+  </div>
+</body>
+</html>
