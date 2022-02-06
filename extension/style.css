@@ -1,10 +1,11 @@
 :root {
   --text-primary: #f9d094;
+  --bg-primary: #2e2a24;
 }
 body {
   margin: 0;
   color: var(--text-primary);
-  background-color: #2e2a24;
+  background-color: var(--bg-primary);
 }
 * {
   -webkit-user-drag: none;
@@ -24,9 +25,10 @@ h1 {
 table.results-table {
   width: calc(100% - 32px);
   box-sizing: border-box;
-  margin: 16px;
+  margin: -16px 16px 16px;
   font-size: 1.2em;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .results-table tbody tr:first-child td {
   padding: 2px;
@@ -39,6 +41,10 @@ table.results-table {
   text-align: left;
   font-size: 1.2em;
   border-bottom: 1px solid white;
+  position: sticky;
+  padding-top: 16px;
+  top: 44px;
+  background-color: var(--bg-primary);
 }
 .results-table td {
   padding: 4px;
