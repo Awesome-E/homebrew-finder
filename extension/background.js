@@ -1,5 +1,9 @@
 let api = null
-if (typeof chrome !== 'undefined') api = chrome
+let browserAction = 'browserAction'
+if (typeof chrome !== 'undefined') {
+  api = chrome
+  browserAction = 'action'
+}
 if (typeof browser !== 'undefined') api = browser
 
 const brewPackages = {}
@@ -49,17 +53,17 @@ function updateBadge (url, tabId) {
   if (!api) return
   const pageResults = url ? (brewPackages[url] || {}) : {}
   if (!pageResults.total_hits) {
-    api.action.setBadgeText({ tabId, text: '' }, () => {})
-    api.action.setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
+    api[browserAction].setBadgeText({ tabId, text: '' }, () => {})
+    api[browserAction].setIcon({ tabId, path: '/icons/pack-icon-inactive-64.png' })
     return
   }
   const totalHits = pageResults.total_hits
   const primaryHits = pageResults.results.filter(r => r.primary).length
   const hitCount = primaryHits || totalHits
   const badgeConfig = { tabId, color: primaryHits ? '#be862d' : '#000', text: hitCount > 999 ? '1k+' : String(hitCount) }
-  api.action.setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
-  api.action.setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
-  api.action.setIcon({ tabId, path: '/icons/pack-icon-64.png' })
+  api[browserAction].setBadgeBackgroundColor({ tabId, color: badgeConfig.color }, () => {})
+  api[browserAction].setBadgeText({ tabId, text: badgeConfig.text || '' }, () => {})
+  api[browserAction].setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
 
 function updateAvailablePackages (url, tabId) {
@@ -180,7 +184,7 @@ if (api) {
     findCurrentPagePackages()
   })
 
-  api.action.setPopup({ popup: 'popup/index.html' })
+  api[browserAction].setPopup({ popup: 'popup/index.html' })
 
   const config = {
     resetInterval: 15
