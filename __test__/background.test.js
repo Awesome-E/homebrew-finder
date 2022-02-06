@@ -22,7 +22,7 @@ describe('toURL behaves as expected', () => {
   })
   test('strips www in hostname', () => {
     const result = URLUtil.toURL(new URL('https://www.google.com/'))
-    expect(result).toBe('https://google.com/')
+    expect(result).toBe('https://google.com')
   })
 })
 
@@ -37,15 +37,21 @@ describe('getSearchQuery returns the correct values', () => {
   })
   test('correct root URLs for other URLs', () => {
     const result = URLUtil.getSearchQuery(new URL('https://formulae.brew.sh/'), ['www', 'currentOnly', 'currentAndSub'])
-    expect(result).toBe('"https://www\\\\.formulae\\\\.brew\\\\.sh" "https://formulae\\\\.brew\\\\.sh" "formulae\\\\.brew\\\\.sh/"')
+    expect(result).toBe('"https://www\\\\.formulae\\\\.brew\\\\.sh" "https://formulae\\\\.brew\\\\.sh" "formulae\\\\.brew\\\\.sh"')
   })
-  test('correct root URLs for GitHub repos', () => {
+  test('correct pathed URLs for GitHub repos', () => {
     const result = URLUtil.getSearchQuery(new URL('https://github.com/Awesome-E/homebrew-finder'), ['www_pathed', 'currentOnly_pathed', 'currentAndSub_pathed'])
     expect(result).toBe('"https://www\\\\.github\\\\.com/Awesome-E/homebrew-finder" "https://github\\\\.com/Awesome-E/homebrew-finder" "github\\\\.com/Awesome-E/homebrew-finder"')
   })
   test('correct pathed URLs for other URLs', () => {
     const result = URLUtil.getSearchQuery(new URL('https://formulae.brew.sh/firefox'), ['www_pathed', 'currentOnly_pathed', 'currentAndSub_pathed'])
     expect(result).toBe('"https://www\\\\.formulae\\\\.brew\\\\.sh/firefox" "https://formulae\\\\.brew\\\\.sh/firefox" "formulae\\\\.brew\\\\.sh/firefox"')
+  })
+  test('same result for pathed and root when on homepage', () => {
+    const result = URLUtil.getSearchQuery(new URL('https://github.com/Awesome-E'), ['www_pathed', 'currentOnly_pathed', 'currentAndSub_pathed'])
+    expect(result).toBe('"https://www\\\\.github\\\\.com/Awesome-E" "https://github\\\\.com/Awesome-E" "github\\\\.com/Awesome-E"')
+    const result2 = URLUtil.getSearchQuery(new URL('https://brew.sh'), ['www_pathed', 'currentOnly_pathed', 'currentAndSub_pathed'])
+    expect(result2).toBe('"https://www\\\\.brew\\\\.sh" "https://brew\\\\.sh" "brew\\\\.sh"')
   })
 })
 

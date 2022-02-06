@@ -11,19 +11,19 @@ const URLUtil = {
   toURL: function (url /* url object */) {
     if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
     // Synonymize www with root domain, then allow search query to contain both
-    return url.origin.replace(/\/\/www\./, '//') + url.pathname
+    return url.origin.replace(/\/\/www\./, '//') + url.pathname.replace(/^\/$/, '')
   },
   getSearchQuery: function (url, types) {
     if (Object.getPrototypeOf(url).constructor.name !== 'URL') return
     // Add www to the front of the domain (won't affect search results for subdomains)
     const urlOrigin = this.getOrigin(url)
     const urls = {
-      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname}`,
+      www_pathed: `${url.protocol}//www.${url.hostname.replace(/^www\./, '')}${url.pathname.replace(/^\/$/, '')}`,
       currentOnly_pathed: this.toURL(url),
-      currentAndSub_pathed: url.hostname + url.pathname,
+      currentAndSub_pathed: url.hostname + url.pathname.replace(/^\/$/, ''),
       www: urlOrigin.replace(/^(\w+):\/\//, '$1://www.'),
       currentOnly: urlOrigin,
-      currentAndSub: new URL(urlOrigin).hostname + new URL(urlOrigin).pathname
+      currentAndSub: new URL(urlOrigin).hostname + new URL(urlOrigin).pathname.replace(/^\/$/, '')
     }
     // Backslash escape period so it works with Algolia
     Object.entries(urls).forEach(entry => { urls[entry[0]] = entry[1].replace(/\./g, '\\.') })
