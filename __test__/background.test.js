@@ -1,4 +1,4 @@
-const { URLUtil, updateAvailablePackages } = require('../extension/background')
+const { URLUtil, updateAvailablePackages, getSearchRequests } = require('../extension/background')
 global.fetch = jest.fn(() => {
   console.log('fetching')
   return Promise.resolve({
@@ -75,6 +75,61 @@ describe('getOrigin returns the correct values', () => {
   test('root domain for github URLs', () => {
     const result = URLUtil.getOrigin(new URL('https://www.github.com/Awesome-E/homebrew-finder'))
     expect(result).toBe('https://github.com/Awesome-E')
+  })
+})
+
+describe('getSearchRequests returns the correct values', () => {
+  beforeEach(() => {
+    global.reqData = {
+      base: {
+        indexName: 'brew_all',
+        hitsPerPage: 10,
+        facetFilters: '["lang: en", "site: formulae"]',
+        advancedSyntax: true
+      },
+      base2: {
+        indexName: 'brew_all',
+        hitsPerPage: 10,
+        facetFilters: '["lang: en", "site: formulae"]',
+        advancedSyntax: true
+      }
+    }
+  })
+  test('no URL constructor -> error object', () => {
+    const result = getSearchRequests('https://www.github.com/')
+    expect(result).toEqual({ error: 'url is not of constructor URL' })
+  })
+  test('no search pages -> array(1) that has 0 hits per page', () => {
+    const result = getSearchRequests(new URL('https://www.github.com/'))
+    expect(result).toEqual([Object.assign(global.reqData.base, { hitsPerPage: 0, query: '' })])
+  })
+  test('search current page only -> array(1) containing page query', () => {
+    const result = getSearchRequests(new URL('https://www.github.com/'), { page_search: 'always', results_per: 10 })
+    expect(result).toEqual([Object.assign(global.reqData.base, { hitsPerPage: 10, query: '"https://github\\\\.com" "https://www\\\\.github\\\\.com"' })])
+  })
+  test('search root only -> array(2) containing [empty query, root query]', () => {
+    const result = getSearchRequests(new URL('https://www.github.com/'), { root_search: 'always', results_per: 10 })
+    expect(result).toEqual([
+      Object.assign(global.reqData.base, { hitsPerPage: 0, query: '' }),
+      Object.assign(global.reqData.base2, { hitsPerPage: 10, query: '"https://github\\\\.com/" "https://www\\\\.github\\\\.com/"' })
+    ])
+  })
+  test('search page and root -> array(2) containing [page query, root query]', () => {
+    const result = getSearchRequests(new URL('https://www.github.com/'), { page_search: 'always', root_search: 'always', results_per: 10 })
+    expect(result).toEqual([
+      Object.assign(global.reqData.base, { hitsPerPage: 10, query: '"https://github\\\\.com" "https://www\\\\.github\\\\.com" "https://github\\\\.com/" "https://www\\\\.github\\\\.com/"' }),
+      Object.assign(global.reqData.base2, { hitsPerPage: 10, query: '"https://github\\\\.com/" "https://www\\\\.github\\\\.com/"' })
+    ])
+  })
+  test('search current and subdomain -> array(2) containing [page query, subdomain query]', () => {
+    const result = getSearchRequests(new URL('https://www.github.com/Awesome-E/homebrew-finder'), { page_search: 'always', subdomain_search: 'always', results_per: 10 })
+    expect(result).toEqual([
+      Object.assign(global.reqData.base, { hitsPerPage: 10, query: '"https://github\\\\.com/Awesome-E/homebrew-finder" "https://www\\\\.github\\\\.com/Awesome-E/homebrew-finder" "github\\\\.com/Awesome-E/homebrew-finder" "github\\\\.com/Awesome-E"' }),
+      Object.assign(global.reqData.base2, { hitsPerPage: 10, query: '"github\\\\.com/Awesome-E"' })
+    ])
+  })
+  afterAll(() => {
+    delete global.reqData
   })
 })
 

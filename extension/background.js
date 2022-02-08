@@ -66,7 +66,7 @@ function updateBadge (url, tabId) {
   api[browserAction].setIcon({ tabId, path: '/icons/pack-icon-64.png' })
 }
 
-function getSearchRequests (url, config) {
+function getSearchRequests (url, config = {}) {
   // only called if page has not been searched yet
   if (Object.getPrototypeOf(url).constructor.name !== 'URL') return { error: 'url is not of constructor URL' }
   const rootWasSearched = !!brewPackages[URLUtil.getOrigin(url)]
@@ -105,7 +105,7 @@ function getSearchRequests (url, config) {
 }
 function updateAvailablePackages (url, tabId) {
   if (!tabId) {
-    console.error(new Error('No Tab ID Provided'))
+    if (api) console.error(new Error('No Tab ID Provided'))
     return { error: 'No tab ID provided' }
   }
   url = new URL(url)
