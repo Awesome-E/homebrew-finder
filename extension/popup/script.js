@@ -1,3 +1,7 @@
+let api = null
+if (typeof chrome !== 'undefined') api = chrome
+if (typeof browser !== 'undefined') api = browser
+
 document.querySelectorAll('.content, .nocontent').forEach(elm => elm.classList.add('hidden'))
 
 function copyText (txt) {
@@ -87,8 +91,8 @@ function addRows (data = {}) {
   })
 }
 
-(chrome || browser).runtime.sendMessage({ type: 'get-site-packages' }, data => console.log(data));
-(chrome || browser).runtime.onMessage.addListener(message => {
+api.runtime.sendMessage({ type: 'get-site-packages' }, data => console.log(data))
+api.runtime.onMessage.addListener(message => {
   if (message.type !== 'send-site-packages') return
   addRows(message.data)
 })

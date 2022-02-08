@@ -1,9 +1,5 @@
 let api = null
-// let browserAction = 'browserAction'
-if (typeof chrome !== 'undefined') {
-  api = chrome
-  // browserAction = 'action'
-}
+if (typeof chrome !== 'undefined') api = chrome
 if (typeof browser !== 'undefined') api = browser
 
 api.storage.sync.get({
