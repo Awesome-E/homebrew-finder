@@ -103,6 +103,23 @@ function getSearchRequests (url, config = {}) {
     : null
   return [pageQuery, rootQuery].filter(q => !!q)
 }
+function parseSearchResults (url, requests, response) {
+  return response.results.map((result, index) => {
+    return {
+      results: result.hits.filter(x => x.anchor === 'default').map(x => {
+        return {
+          brew_url: x.url,
+          content_url: x.content,
+          type: x.hierarchy.lvl0,
+          formula: x.hierarchy.lvl1,
+          primary: URLUtil.toURL(new URL(x.content)) === URLUtil.toURL(url),
+          name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
+        }
+      }),
+      total_hits: requests[index].hitsPerPage ? result.nbHits : 0
+    }
+  })
+}
 function updateAvailablePackages (url, tabId) {
   if (!tabId) {
     if (api) console.error(new Error('No Tab ID Provided'))
@@ -129,21 +146,7 @@ function updateAvailablePackages (url, tabId) {
     },
     body: JSON.stringify({ requests })
   }).then(r => r.json()).then(response => {
-    const data = response.results.map((result, index) => {
-      return {
-        results: result.hits.filter(x => x.anchor === 'default').map(x => {
-          return {
-            brew_url: x.url,
-            content_url: x.content,
-            type: x.hierarchy.lvl0,
-            formula: x.hierarchy.lvl1,
-            primary: URLUtil.toURL(new URL(x.content)) === URLUtil.toURL(url),
-            name: x.hierarchy.lvl0 === 'Casks' ? x.hierarchy.lvl2.replace(/^Names?:\n\s+/, '').split(',')[0] : ''
-          }
-        }),
-        total_hits: requests[index].hitsPerPage ? result.nbHits : 0
-      }
-    })
+    const data = parseSearchResults(url, requests, response)
     if (requests[0].hitsPerPage) brewPackages[URLUtil.toURL(url)] = data[0]
     if (data[1]) brewPackages[URLUtil.getOrigin(url)] = data[1]
     updateBadge(URLUtil.toURL(url), tabId)
