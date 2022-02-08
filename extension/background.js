@@ -187,7 +187,9 @@ if (api) {
       subdomain_search: 'never',
       page_search: 'always',
       results_per: 10,
-      cache_hrs: 12
+      cache_hrs: 12,
+      formula_click_action: 'newtab',
+      name_click_action: 'newtab'
     }
   }, data => {
     Object.assign(config, data.options)

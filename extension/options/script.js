@@ -8,7 +8,9 @@ api.storage.sync.get({
     subdomain_search: 'never',
     page_search: 'always',
     results_per: 10,
-    cache_hrs: 12
+    cache_hrs: 12,
+    formula_click_action: 'newtab',
+    name_click_action: 'newtab'
   }
 }, function (items) {
   const data = items.options
