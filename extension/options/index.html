@@ -13,7 +13,13 @@
   <h1>Settings</h1>
   <h2 class="section-header">Background Search Frequency</h2>
   <div class="option">
-    <h3>Search for packages in a website</h3>
+    <h3>Search for packages that match the webpage</h3>
+    <label><input type="radio" name="page_search" value="always"> Every time I visit a new webpage</label>
+    <label><input type="radio" name="page_search" value="manually"> When I click the extension</label>
+    <label><input type="radio" name="page_search" value="never"> Never</label>
+  </div>
+  <div class="option">
+    <h3>Search for packages across the entire site</h3>
     <label><input type="radio" name="root_search" value="always"> Every time I visit a new website</label>
     <label><input type="radio" name="root_search" value="manually"> When I click the extension</label>
     <label><input type="radio" name="root_search" value="never"> Never</label>
@@ -23,12 +29,6 @@
     <label><input type="radio" name="subdomain_search" value="always"> Every time I visit a new website</label>
     <label><input type="radio" name="subdomain_search" value="manually"> When I click the extension</label>
     <label><input type="radio" name="subdomain_search" value="never"> Never</label>
-  </div>
-  <div class="option">
-    <h3>Search for exact page matches</h3>
-    <label><input type="radio" name="page_search" value="always"> Every time I visit a new website</label>
-    <label><input type="radio" name="page_search" value="manually"> When I click the extension</label>
-    <label><input type="radio" name="page_search" value="never"> Never</label>
   </div>
   <h2 class="section-header">Search Configuration</h2>
   <div class="option">
@@ -41,13 +41,15 @@
   <div class="option">
     <h3>When clicking on a package formula</h3>
     <label><input type="radio" name="formula_click_action" value="newtab"> Open formula page in a new tab</label>
-    <label><input type="radio" name="formula_click_action" value="current"> Open formula in current tab</label>
+    <label><input type="radio" name="formula_click_action" value="copyname"> Copy the package formula</label>
+    <label><input type="radio" name="formula_click_action" value="copyurl"> Copy formulae.brew.sh page link</label>
     <label><input type="radio" name="formula_click_action" value="nothing"> Do nothing</label>
   </div>
   <div class="option">
     <h3>When clicking on a package name</h3>
     <label><input type="radio" name="name_click_action" value="newtab"> Open package website in a new tab</label>
-    <label><input type="radio" name="name_click_action" value="current"> Open package website in current tab</label>
+    <label><input type="radio" name="name_click_action" value="copyname"> Copy the package name</label>
+    <label><input type="radio" name="name_click_action" value="copyurl"> Copy the website URL</label>
     <label><input type="radio" name="name_click_action" value="nothing"> Do nothing</label>
   </div>
   <br>

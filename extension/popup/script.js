@@ -15,7 +15,8 @@ function copyText (txt) {
   document.body.removeChild(copyTextArea)
 }
 
-function addRows (data = {}) {
+function addRows (data = {}, config = {}) {
+  config.formula_click_action = 'current'
   document.querySelectorAll(data.total_hits ? '.content' : '.nocontent').forEach(elm => elm.classList.remove('hidden'))
   if (!data.results) return
   console.log(data)
@@ -28,13 +29,21 @@ function addRows (data = {}) {
     formulaLink.href = result.brew_url
     formulaLink.innerText = result.formula
     formulaLink.title = result.brew_url.replace(/#\w+$/, '')
-    formulaLink.target = '_blank'
+    formulaLink.addEventListener('click', e => {
+      e.preventDefault()
+      if (config.formula_click_action === 'nothing') return
+      api.runtime.sendMessage({ type: 'window-create', url: formulaLink.href })
+    })
     // Link to Software Vendor Page
     const nameLink = cols[1].querySelector('a')
     nameLink.href = result.content_url
     nameLink.innerText = result.name || result.formula
     nameLink.title = result.content_url.replace(/#\w+$/, '')
-    nameLink.target = '_blank'
+    nameLink.addEventListener('click', e => {
+      e.preventDefault()
+      if (config.name_click_action === 'nothing') return
+      api.runtime.sendMessage({ type: 'window-create', url: nameLink.href })
+    })
     // Download Button
     const dlBtn = cols[2].querySelector('a.download')
     dlBtn.href = '#'

@@ -222,6 +222,10 @@ if (api) {
         sendResponse({ message: 'success' })
         break
       }
+      case 'window-create' : {
+        api.tabs.create({ url: request.url })
+        break
+      }
       case 'update-settings': {
         Object.assign(config, request.data)
         if (config.refreshInterval) clearInterval(config.refreshInterval)
