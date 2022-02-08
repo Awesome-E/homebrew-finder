@@ -5,7 +5,7 @@ module.exports = function (isFF) {
     version: '0.1',
     // All host permissions so that we automatically have access to pages
     // Also removes the annoying/confusing "Access Requested" message
-    host_permissions: ['*'],
+    host_permissions: ['<all_urls>'],
     permissions: [
       'activeTab',
       'tabs',

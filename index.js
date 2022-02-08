@@ -1,12 +1,15 @@
 const fs = require('fs')
 const fse = require('fs-extra')
 const watch = require('node-watch')
-const chromeManifest = require('./manifest')(false)
-const ffManifest = require('./manifest')(true)
 
 function build () {
   fse.copySync('./extension', './build/chrome', { overwrite: true })
   fse.copySync('./extension', './build/firefox', { overwrite: true })
+
+  delete require.cache[require.resolve('./manifest')]
+
+  const chromeManifest = require('./manifest')(false)
+  const ffManifest = require('./manifest')(true)
 
   fs.writeFileSync('./build/chrome/manifest.json', JSON.stringify(chromeManifest))
   fs.writeFileSync('./build/firefox/manifest.json', JSON.stringify(ffManifest))
