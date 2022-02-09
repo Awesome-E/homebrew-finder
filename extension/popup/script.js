@@ -16,7 +16,6 @@ function copyText (txt) {
 }
 
 function addRows (data = {}, config = {}) {
-  config.formula_click_action = 'current'
   document.querySelectorAll(data.total_hits ? '.content' : '.nocontent').forEach(elm => elm.classList.remove('hidden'))
   if (!data.results) return
   console.log(data)
@@ -29,20 +28,28 @@ function addRows (data = {}, config = {}) {
     formulaLink.href = result.brew_url
     formulaLink.innerText = result.formula
     formulaLink.title = result.brew_url.replace(/#\w+$/, '')
+    if (config.formula_click_action === 'nothing') formulaLink.classList.add('inactive-link')
+    else if (config.formula_click_action.match(/^copy/)) formulaLink.classList.add('copyhover')
     formulaLink.addEventListener('click', e => {
       e.preventDefault()
       if (config.formula_click_action === 'nothing') return
-      api.runtime.sendMessage({ type: 'window-create', url: formulaLink.href })
+      if (config.formula_click_action === 'copyname') return copyText(result.formula)
+      if (config.formula_click_action === 'copyurl') return copyText(result.brew_url)
+      api.runtime.sendMessage({ type: 'window-create', url: result.brew_url })
     })
     // Link to Software Vendor Page
     const nameLink = cols[1].querySelector('a')
     nameLink.href = result.content_url
     nameLink.innerText = result.name || result.formula
     nameLink.title = result.content_url.replace(/#\w+$/, '')
+    if (config.name_click_action === 'nothing') nameLink.classList.add('inactive-link')
+    else if (config.name_click_action.match(/^copy/)) nameLink.classList.add('copyhover')
     nameLink.addEventListener('click', e => {
       e.preventDefault()
       if (config.name_click_action === 'nothing') return
-      api.runtime.sendMessage({ type: 'window-create', url: nameLink.href })
+      if (config.name_click_action === 'copyname') return copyText(result.name || result.formula)
+      if (config.name_click_action === 'copyurl') return copyText(result.content_url)
+      api.runtime.sendMessage({ type: 'window-create', url: result.content_url })
     })
     // Download Button
     const dlBtn = cols[2].querySelector('a.download')
@@ -103,5 +110,12 @@ function addRows (data = {}, config = {}) {
 api.runtime.sendMessage({ type: 'get-site-packages' }, data => console.log(data))
 api.runtime.onMessage.addListener(message => {
   if (message.type !== 'send-site-packages') return
-  addRows(message.data)
+  api.storage.sync.get({
+    options: {
+      formula_click_action: 'newtab',
+      name_click_action: 'newtab'
+    }
+  }, data => {
+    addRows(message.data, data.options)
+  })
 })

@@ -12,5 +12,17 @@ h1 {
   z-index: 1;
 }
 p {
-  margin-top: 0
+  margin-top: 0;
+}
+.inactive-link:hover {
+  text-decoration: none;
+  cursor: default;
+}
+.copyhover:hover {
+  opacity: 0.85;
+  text-decoration: none;
+}
+.copyhover:active {
+  opacity: 0.5;
+  text-decoration: none;
 }

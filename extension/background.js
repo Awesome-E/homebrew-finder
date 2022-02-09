@@ -205,6 +205,7 @@ if (api) {
         sendResponse({ message: 'request received' })
         api.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
           const tab = tabs[0]
+          if (!tab) return api.runtime.sendMessage({ type: 'send-site-packages', data: {} })
           function exit (url) {
             updateBadge(url ? URLUtil.toURL(url) : undefined, tab.id)
             const data = url ? brewPackages[URLUtil.toURL(url)] || brewPackages[URLUtil.getOrigin(url)] || {} : {}
