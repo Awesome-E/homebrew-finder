@@ -26,3 +26,11 @@ p {
   opacity: 0.5;
   text-decoration: none;
 }
+p.nocontent:not(.settings-link) {
+  margin-bottom: 0.5em;
+  color: var(--text-primary);
+}
+.settings-link a {
+  font-size: 1.3em;
+  color: var(--text-secondary);
+}

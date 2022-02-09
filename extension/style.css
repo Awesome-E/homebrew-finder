@@ -1,5 +1,6 @@
 :root {
   --text-primary: #f9d094;
+  --text-secondary: #be862d;
   --bg-primary: #2e2a24;
 }
 body {
@@ -54,7 +55,7 @@ table.results-table {
   text-align: right;
 }
 .results-table td:nth-child(2) a {
-  color: #be862d;
+  color: var(--text-secondary);
 }
 .results-table td:nth-child(3) {
   white-space: nowrap;
