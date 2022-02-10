@@ -1,7 +1,7 @@
 module.exports = function (isFF) {
   const manifest = {
     name: 'Homebrew Finder',
-    description: "A Browser Extension that finds Homebrew Packages for the current website you're on",
+    description: 'A Browser Extension that finds Homebrew Packages for the current website you are visiting',
     version: '0.1',
     // All host permissions so that we automatically have access to pages
     // Also removes the annoying/confusing "Access Requested" message
