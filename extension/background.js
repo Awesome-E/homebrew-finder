@@ -1,10 +1,11 @@
 let api = null
 let browserAction = 'browserAction'
-if (typeof chrome !== 'undefined') {
+if (typeof browser !== 'undefined') {
+  api = browser
+} else if (typeof chrome !== 'undefined') {
   api = chrome
   browserAction = 'action'
 }
-if (typeof browser !== 'undefined') api = browser
 
 const brewPackages = {}
 const URLUtil = {
